@@ -1,2 +1,3 @@
 # sushi-chef-refugee-response-crisis-advice
-Sushi Chef script for importing refugee-response-crisis-advice content
+
+Sushi Chef script for importing crisis advice content from The Refugee Response.
