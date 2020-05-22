@@ -18,7 +18,7 @@ YOUTUBE_PLAYLIST_URL_FORMAT = "https://www.youtube.com/playlist?list={0}"
 
 PLAYLIST_MAP = {
   # "en": [
-  #   "PLOZioxrIwCv0zNRqCsTN979Ez3jBRQiNN"
+  #   "PLOZioxrIwCv0zNRqCsTN979Ez3jBRQiNN"  # error
   # ],
   # "ru": [
   #   "PLOZioxrIwCv3SW4keysO7tO2bMnHlkE8h"
@@ -29,9 +29,9 @@ PLAYLIST_MAP = {
   # "es": [
   #   "PLOZioxrIwCv07eahemHM6wGvCePv6B6X8"
   # ],
-  "som": [
-    "PLOZioxrIwCv2lOyXZPuW213wF1nXQmKUM"
-  ],
+  # "som": [
+  #   "PLOZioxrIwCv2lOyXZPuW213wF1nXQmKUM"  # error => fixed by insert video info
+  # ],
   # "ne": [
   #   "PLOZioxrIwCv0q8q6KQBlX0hBIl1ZfE268"
   # ],
@@ -56,9 +56,9 @@ PLAYLIST_MAP = {
   # "Rohingya": [
   #   "PLOZioxrIwCv33zt5aFFjWqDoEMm55MVA9"
   # ],
-  # "Karenni": [
-  #   "PLOZioxrIwCv03K3kD4hP8ltoX3QOsFLNP"
-  # ],
+  "Karenni": [
+    "PLOZioxrIwCv03K3kD4hP8ltoX3QOsFLNP"
+  ],
   # "Karen": [
   #   "PLOZioxrIwCv3-N46sJG8QZnHT4G4s4KDk"
   # ]
@@ -193,7 +193,7 @@ class RefugeeResponseVideo():
 
       if video:
         try:
-          vinfo = video.get_resource_info( dict(no_playlist=True, ignore_errors=True) )
+          vinfo = video.get_resource_info()
           # Save the remaining "temporary scraped values" of attributes with actual values
           # from the video metadata.
           json.dump(vinfo,
@@ -221,36 +221,113 @@ class RefugeeResponseVideo():
 
     return True
 
-def get_playlist_info(playlist_id, use_cache=True):
-  """
-  Get playlist info from either local json cache or URL
-  """
-  if not os.path.isdir(YOUTUBE_CACHE_DIR):
-    os.mkdir(YOUTUBE_CACHE_DIR)
-  playlist_info_json_path = os.path.join(YOUTUBE_CACHE_DIR, playlist_id + '.json')
+class RefugeeResponsePlaylist():
+  playlist_id = ''
+  lang_name = ''
+  use_cache = True
+  playlist_info_json_path = ''
 
-  playlist_info = None
-  if os.path.exists(playlist_info_json_path) and use_cache:
-    playlist_info = json.load(open(playlist_info_json_path))
-    LOGGER.info("Retrieving cached playlist information...")
+  def __init__(self, playlist_item, use_cache=True):
+    self.lang_name = playlist_item[0]
+    self.playlist_id = playlist_item[1][0]
+    self.use_cache = use_cache
+    self.playlist_info_json_path = os.path.join(YOUTUBE_CACHE_DIR, self.lang_name + '.json')
+    LOGGER.info("playlist_info_json_path: %s", self.playlist_info_json_path)
 
-  if not playlist_info:
-    playlist_url = YOUTUBE_PLAYLIST_URL_FORMAT.format(playlist_id)
-    playlist_resource = YouTubeResource(playlist_url)
+  def get_playlist_info(self):
+    """
+    Get playlist info from either local json cache or URL
+    """
+    if not os.path.isdir(YOUTUBE_CACHE_DIR):
+      os.mkdir(YOUTUBE_CACHE_DIR)
 
-    if playlist_resource:
-      try:
-        playlist_info = playlist_resource.get_resource_info( dict(no_playlist=True, ignore_errors=True, skip_download=True) )
-        # Save the remaining "temporary scraped values" of attributes with actual values
-        # from the video metadata.
-        json.dump(playlist_info,
-                  open(playlist_info_json_path, 'w'),
-                  indent=4,
-                  ensure_ascii=False,
-                  sort_keys=False)
-        return playlist_info
-      except Exception as e:
-        LOGGER.error("Failed to get playlist info: %s", e)
-        return None
+    playlist_info = None
+    if os.path.exists(self.playlist_info_json_path) and self.use_cache:
+      LOGGER.info("Retrieving cached playlist information...")
+      playlist_info = json.load(open(self.playlist_info_json_path))
 
-  return playlist_info
+    if not playlist_info:
+      playlist_url = YOUTUBE_PLAYLIST_URL_FORMAT.format(self.playlist_id)
+      playlist_resource = YouTubeResource(playlist_url)
+
+      if playlist_resource:
+        try:
+          playlist_info = playlist_resource.get_resource_info( dict(ignoreerrors=False, skip_download=True) )
+          # Save the remaining "temporary scraped values" of attributes with actual values
+          # from the video metadata.
+          json.dump(playlist_info,
+                    open(self.playlist_info_json_path, 'w'),
+                    indent=4,
+                    ensure_ascii=False,
+                    sort_keys=False)
+          return playlist_info
+        except Exception as e:
+          LOGGER.error("Failed to get playlist info: %s", e)
+          return None
+    return playlist_info
+
+  def insert_video_info(self, video_id):
+    if not os.path.isdir(YOUTUBE_CACHE_DIR):
+      os.mkdir(YOUTUBE_CACHE_DIR)
+      return False
+
+    video_info_json_path = os.path.join(YOUTUBE_CACHE_DIR, video_id + '.json')
+    video_info = None
+    if os.path.exists(video_info_json_path):
+      LOGGER.info("[Video: %s] Retrieving cached video information...", video_id)
+      video_info = json.load(open(video_info_json_path))
+    if not video_info:
+      LOGGER.error("[Video: %s] Failed to retrive video info", video_id)
+      return False
+
+    playlist_info = None
+    if os.path.exists(self.playlist_info_json_path):
+      LOGGER.info("[Playlist %s] Retrieving cached playlist information...", self.playlist_id)
+      playlist_info = json.load(open(self.playlist_info_json_path))
+
+    if playlist_info:
+      children_obj = playlist_info['children']
+      children_obj.append(video_info)
+      json.dump(playlist_info,
+                open(self.playlist_info_json_path, 'w'),
+                indent=4,
+                ensure_ascii=False,
+                sort_keys=False)
+      return True
+    return False
+
+# def get_playlist_info(playlist_item, use_cache=True):
+#   """
+#   Get playlist info from either local json cache or URL
+#   """
+#   lang_str = playlist_item[0]
+#   playlist_id = playlist_item[1][0]
+#   if not os.path.isdir(YOUTUBE_CACHE_DIR):
+#     os.mkdir(YOUTUBE_CACHE_DIR)
+#   playlist_info_json_path = os.path.join(YOUTUBE_CACHE_DIR, lang_str + '.json')
+
+#   playlist_info = None
+#   if os.path.exists(playlist_info_json_path) and use_cache:
+#     LOGGER.info("Retrieving cached playlist information...")
+#     playlist_info = json.load(open(playlist_info_json_path))
+
+#   if not playlist_info:
+#     playlist_url = YOUTUBE_PLAYLIST_URL_FORMAT.format(playlist_id)
+#     playlist_resource = YouTubeResource(playlist_url)
+
+#     if playlist_resource:
+#       try:
+#         playlist_info = playlist_resource.get_resource_info( dict(noplaylist=True, ignoreerrors=True, skip_download=True) )
+#         # Save the remaining "temporary scraped values" of attributes with actual values
+#         # from the video metadata.
+#         json.dump(playlist_info,
+#                   open(playlist_info_json_path, 'w'),
+#                   indent=4,
+#                   ensure_ascii=False,
+#                   sort_keys=False)
+#         return playlist_info
+#       except Exception as e:
+#         LOGGER.error("Failed to get playlist info: %s", e)
+#         return None
+
+#   return playlist_info

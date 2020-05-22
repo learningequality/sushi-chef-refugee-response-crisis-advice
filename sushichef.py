@@ -34,6 +34,8 @@ CHANNEL_THUMBNAIL = None                                    # Local path or url 
 LANGUAGE_KEYNAME = "--lang"
 NO_CACHE_KEYNAME = "--nocache"
 DOWNLOAD_TO_GOOGLE_SHEET_KEYNAME = "--tosheet"
+EXTRACT_VIDEO_INFO = "--video"
+EXTRACT_VIDEO_PLAYLIST_INFO = "--playlist"
 REFUGEE_RESPONSE = "Refugee Response"
 YOUTUBE_VIDEO_URL_FORMAT = "https://www.youtube.com/watch?v={0}"
 TOPIC_NAME_FORMAT = "Crisis Advice from the Refugee Response ({0})"
@@ -62,6 +64,9 @@ class RefugeeResponseSushiChef(SushiChef):
     }
     use_cache = True   # field to indicate whether use cached json data
     to_sheet = False
+    insert_video_info = False
+    video_list = []
+    to_playlist = ''
 
     def construct_channel(self, *args, **kwargs):
         """
@@ -85,10 +90,25 @@ class RefugeeResponseSushiChef(SushiChef):
           if key == DOWNLOAD_TO_GOOGLE_SHEET_KEYNAME:
             self.to_sheet = True
             LOGGER.info("to_sheet = '%d'", self.to_sheet)
-        
+          if key == EXTRACT_VIDEO_INFO:
+            self.insert_video_info = True
+            self.video_list = value.split(",")
+          if key == EXTRACT_VIDEO_PLAYLIST_INFO:
+            self.insert_video_info = True
+            self.to_playlist = value
+            LOGGER.info("playlist = '%s'", self.to_playlist)
+
         if self.to_sheet:
           upload_description_to_google_sheet(self.use_cache)
           exit(0)
+
+        if self.insert_video_info:
+          if self.video_list is not None and self.to_playlist in PLAYLIST_MAP and len(self.video_list) > 0:
+            insert_video_info(self.video_list, self.to_playlist, self.use_cache)
+            exit(0)
+          else:
+            LOGGER.error("Invalid arguments to inset video info, aborting")
+            exit(1)
 
         channel = self.get_channel(*args, **kwargs)  # Create ChannelNode from data in self.channel_info
 
@@ -105,7 +125,7 @@ class RefugeeResponseSushiChef(SushiChef):
               source_id='refugeeresponse-child-topic-{0}'.format(rr_lang_obj.code),
               language=rr_lang_obj.code
             )
-            download_video_topics(topic_node, playlist_id, rr_lang_obj, self.use_cache)
+            download_video_topics(topic_node, (lang, id_list), rr_lang_obj, self.use_cache)
             channel.add_child(topic_node)
           else:
             raise RefugeeResponseConfigError("Empty playlist info for language: " + lang)
@@ -113,11 +133,12 @@ class RefugeeResponseSushiChef(SushiChef):
           raise_for_invalid_channel(channel)  # Check for errors in channel construction
           return channel    
         
-def download_video_topics(topic_node, playlist_id, lang_obj, use_cache = True, to_sheet = False):
+def download_video_topics(topic_node, playlist_item, lang_obj, use_cache = True, to_sheet = False):
   """
   Scrape, collect, and download the videos from playlist.
   """
-  playlist_info = get_playlist_info(playlist_id, use_cache)
+  playlist_obj = RefugeeResponsePlaylist(playlist_item, use_cache)
+  playlist_info = playlist_obj.get_playlist_info()
   videos = [entry['id'] for entry in playlist_info.get('children')]
   for video in videos:
     try:
@@ -144,9 +165,28 @@ def download_video_topics(topic_node, playlist_id, lang_obj, use_cache = True, t
           ])
         topic_node.add_child(video_node)
       else:
-        LOGGER.error("Failed to download video")
+        LOGGER.error("Failed to download video for: %s", video)
     except Exception as e:
       print('Error downloading this video:', e)
+
+def insert_video_info(video_list, playlist, use_cache = True):
+  playlist_item = (playlist, PLAYLIST_MAP[playlist][0])
+  playlist_obj = RefugeeResponsePlaylist(playlist_item, use_cache)
+  for video in video_list: 
+    try:
+      video_url = YOUTUBE_VIDEO_URL_FORMAT.format(video)
+      rr_video_obj = RefugeeResponseVideo(
+                      url=video_url,
+                      language='und'
+                    )
+      if rr_video_obj.download_info(use_cache):
+        LOGGER.info("Success extract video info with title: %s", rr_video_obj.title)
+        if not playlist_obj.insert_video_info(video):
+          LOGGER.error("Failed to insert video: %s", rr_video_obj.title)
+      else:
+        LOGGER.error("Failed to extract video info for: %s", video)
+    except Exception as e:
+      print('Error extract video info', e)
 
 def upload_description_to_google_sheet(use_cache = True):
   """
@@ -160,7 +200,8 @@ def upload_description_to_google_sheet(use_cache = True):
 
     if id_list is not None and len(id_list) > 0:
       playlist_id = id_list[0]
-      playlist_info = get_playlist_info(playlist_id, use_cache)
+      playlist_obj = RefugeeResponsePlaylist((lang, id_list), use_cache)
+      playlist_info = playlist_obj.get_playlist_info()
       if playlist_info is None:
         LOGGER.error("Invalid video playlist: %s", playlist_id)
         raise RefugeeResponseConfigError("Invalid playlist: " + playlist_id)

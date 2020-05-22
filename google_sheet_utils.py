@@ -11,6 +11,12 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # The ID and range of a sample spreadsheet.
 SPREADSHEET_ID = '1dL2V0_ne4j-y0_ZVU4Mm4B_C_O0qoGpd34yHzs99U3s'
 
+TITLE_LIST = ['Video ID',
+              'Video URL',
+              'Video Title',
+              'Video Language',
+              'Description']
+
 class RefugeeResponseDescriptionRecord():
   video_id = ''
   video_title = ''
@@ -36,7 +42,6 @@ class RefugeeResponseSheetWriter():
   sheet_service = None
   creds = None
   titled = False
-  clear_range = ''
 
   def __init__(self, spreadsheet_id):
     self.spreadsheet_id = spreadsheet_id
@@ -58,22 +63,19 @@ class RefugeeResponseSheetWriter():
     service = build('sheets', 'v4', credentials=self.creds)
     self.sheet_service = service.spreadsheets()
 
-  def clear_old_records(self):
+    if self.title_exist():
+      self.titled = True
+
+  def clear_old_records(self, range_str):
     body = {}
     clear_response = self.sheet_service.values().clear(
                           spreadsheetId=self.spreadsheet_id,
-                          range=self.clear_range,
+                          range=range_str,
                           body=body).execute()
 
   def add_title_line(self):
     values = [
-      [
-        'Video ID',
-        'Video URL',
-        'Video Title',
-        'Video Language',
-        'Description'
-      ]
+      TITLE_LIST
     ]
     body = {
       "majorDimension": "ROWS",
@@ -85,7 +87,22 @@ class RefugeeResponseSheetWriter():
       valueInputOption="USER_ENTERED", body=body).execute()
     self.titled = True
     print("title range: {0}".format(response.get('tableRange')))
-    self.clear_range = response.get('tableRange')
+
+  def title_exist(self):
+    range = "Sheet1!A1"
+    result = self.sheet_service.values().get(
+      spreadsheetId=self.spreadsheet_id, range=range).execute()
+    values = result.get('values', [])
+    if not values:
+      return False
+    else:
+      title_value = values[0][0]
+      if TITLE_LIST[0] in title_value:
+        return True
+      else:
+        raise Exception("Invalid google sheet format found!")
+    return False
+
 
   def write_description_record(self, description_record):
     if not self.titled:
