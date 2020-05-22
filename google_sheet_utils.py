@@ -1,0 +1,111 @@
+from __future__ import print_function
+import pickle
+import os.path
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+
+# If modifying these scopes, delete the file token.pickle.
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+
+# The ID and range of a sample spreadsheet.
+SPREADSHEET_ID = '1dL2V0_ne4j-y0_ZVU4Mm4B_C_O0qoGpd34yHzs99U3s'
+
+class RefugeeResponseDescriptionRecord():
+  video_id = ''
+  video_title = ''
+  video_url = ''
+  description = ''
+  video_language = ''
+
+  def __init__(
+      self,
+      id,
+      url,
+      description,
+      language,
+      title = ''):
+    self.video_id = id
+    self.video_url = url
+    self.description = description
+    self.video_title = title
+    self.video_language = language
+
+class RefugeeResponseSheetWriter():
+  spreadsheet_id = ''
+  sheet_service = None
+  creds = None
+  titled = False
+  clear_range = ''
+
+  def __init__(self, spreadsheet_id):
+    self.spreadsheet_id = spreadsheet_id
+    if os.path.exists('token.pickle'):
+      with open('token.pickle', 'rb') as token:
+        self.creds = pickle.load(token)
+    # If there are no (valid) credentials available, let the user log in.
+    if not self.creds or not self.creds.valid:
+      if self.creds and self.creds.expired and self.creds.refresh_token:
+        self.creds.refresh(Request())
+      else:
+        flow = InstalledAppFlow.from_client_secrets_file(
+          './.credential/credentials.json', SCOPES)
+        self.creds = flow.run_local_server(port=0)
+      # Save the credentials for the next run
+      with open('token.pickle', 'wb') as token:
+        pickle.dump(self.creds, token)
+
+    service = build('sheets', 'v4', credentials=self.creds)
+    self.sheet_service = service.spreadsheets()
+
+  def clear_old_records(self):
+    body = {}
+    clear_response = self.sheet_service.values().clear(
+                          spreadsheetId=self.spreadsheet_id,
+                          range=self.clear_range,
+                          body=body).execute()
+
+  def add_title_line(self):
+    values = [
+      [
+        'Video ID',
+        'Video URL',
+        'Video Title',
+        'Video Language',
+        'Description'
+      ]
+    ]
+    body = {
+      "majorDimension": "ROWS",
+      'values': values
+    }
+    range = "Sheet1!A:A"
+    response = self.sheet_service.values().append(
+      spreadsheetId=self.spreadsheet_id, range=range,
+      valueInputOption="USER_ENTERED", body=body).execute()
+    self.titled = True
+    print("title range: {0}".format(response.get('tableRange')))
+    self.clear_range = response.get('tableRange')
+
+  def write_description_record(self, description_record):
+    if not self.titled:
+      self.add_title_line()
+
+    values = [
+      [
+        description_record.video_id,
+        description_record.video_url,
+        description_record.video_title,
+        description_record.video_language,
+        description_record.description
+      ]
+    ]
+    body = {
+      "majorDimension": "ROWS",
+      'values': values
+    }
+    range = "Sheet1!A:A"
+
+    response = self.sheet_service.values().append(
+      spreadsheetId=self.spreadsheet_id, range=range,
+      valueInputOption="USER_ENTERED", body=body).execute()
