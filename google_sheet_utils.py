@@ -6,9 +6,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 # If modifying these scopes, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+# Since the updating is completed for google sheet, change scope to read only
+# SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-# The ID and range of a sample spreadsheet.
+
+# Google sheet ID
 SPREADSHEET_ID = '1dL2V0_ne4j-y0_ZVU4Mm4B_C_O0qoGpd34yHzs99U3s'
 
 TITLE_LIST = ['Video ID',

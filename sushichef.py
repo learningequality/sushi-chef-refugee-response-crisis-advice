@@ -119,19 +119,25 @@ class RefugeeResponseSushiChef(SushiChef):
             raise RefugeeResponseLangInputError("Invalid Language: " + lang)
 
           if id_list is not None and len(id_list) > 0:
+            # LOGGER.info("Generating TopicNode for language: '%s'", lang)
             playlist_id = id_list[0]
+            tipic_source_id = 'refugeeresponse-child-topic-{0}'.format(rr_lang_obj.name)
             topic_node = TopicNode(
               title=TOPIC_NAME_FORMAT.format(rr_lang_obj.name),
-              source_id='refugeeresponse-child-topic-{0}'.format(rr_lang_obj.code),
+              source_id=tipic_source_id,
+              author=REFUGEE_RESPONSE,
+              provider=REFUGEE_RESPONSE,
+              description=CHANNEL_DESCRIPTION,
               language=rr_lang_obj.code
             )
             download_video_topics(topic_node, (lang, id_list), rr_lang_obj, self.use_cache)
             channel.add_child(topic_node)
+            LOGGER.info("Added TopicNode: '%s'", tipic_source_id)
           else:
             raise RefugeeResponseConfigError("Empty playlist info for language: " + lang)
           
-          raise_for_invalid_channel(channel)  # Check for errors in channel construction
-          return channel    
+        raise_for_invalid_channel(channel)  # Check for errors in channel construction
+        return channel 
         
 def download_video_topics(topic_node, playlist_item, lang_obj, use_cache = True, to_sheet = False):
   """
@@ -140,34 +146,34 @@ def download_video_topics(topic_node, playlist_item, lang_obj, use_cache = True,
   playlist_obj = RefugeeResponsePlaylist(playlist_item, use_cache)
   playlist_info = playlist_obj.get_playlist_info()
   videos = [entry['id'] for entry in playlist_info.get('children')]
-  for video in videos:
+  for video in playlist_info.get('children'):
+    video_id = video['id']
+    video_url = YOUTUBE_VIDEO_URL_FORMAT.format(video_id)
+    video_source_id = 'refugee-response-{0}-{1}'.format(lang_obj.name, video_id)
+    if video_id in VIDEO_DESCRIPTION_MAP:
+      video_description = VIDEO_DESCRIPTION_MAP[video_id]
+    else:
+      video_description = ''
+    LOGGER.info("Video Description: '%s'", video_description)
     try:
-      video_url = YOUTUBE_VIDEO_URL_FORMAT.format(video)
-      rr_video_obj = RefugeeResponseVideo(
-                      url=video_url,
-                      language=lang_obj.code
-                    )
-      if rr_video_obj.download_info(use_cache):
-        LOGGER.info("Success download video with title: %s", rr_video_obj.title)
-        video_source_id = 'refugee-response-{0}'.format(video)
-        video_node = VideoNode(
+      video_node = VideoNode(
           source_id=video_source_id, 
-          title=rr_video_obj.title,
-          description=rr_video_obj.description,
+          title=video['title'],
+          description=video_description,
           author=REFUGEE_RESPONSE,
-          thumbnail=rr_video_obj.thumbnail,
+          provider=REFUGEE_RESPONSE,
+          thumbnail=video['thumbnail'],
           license=get_license("CC BY-NC-ND", copyright_holder=REFUGEE_RESPONSE),
           files=[
             YouTubeVideoFile(
-              youtube_id=video,
-              language=rr_video_obj.language
+              youtube_id=video_id,
+              language=lang_obj.code
             )
           ])
-        topic_node.add_child(video_node)
-      else:
-        LOGGER.error("Failed to download video for: %s", video)
+      topic_node.add_child(video_node)
     except Exception as e:
       print('Error downloading this video:', e)
+
 
 def insert_video_info(video_list, playlist, use_cache = True):
   playlist_item = (playlist, PLAYLIST_MAP[playlist][0])

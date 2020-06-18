@@ -16,10 +16,12 @@ YOUTUBE_ID_REGEX = re.compile(
 )
 YOUTUBE_PLAYLIST_URL_FORMAT = "https://www.youtube.com/playlist?list={0}"
 
+VIDEO_DESCRIPTION_JSON_PATH = os.path.join('chefdata', 'youtubecache', 'video_description.json')
+
 PLAYLIST_MAP = {
-  # "en": [
-  #   "PLOZioxrIwCv0zNRqCsTN979Ez3jBRQiNN"  # error
-  # ],
+  "en": [
+    "PLOZioxrIwCv0zNRqCsTN979Ez3jBRQiNN"
+  ],
   # "ru": [
   #   "PLOZioxrIwCv3SW4keysO7tO2bMnHlkE8h"
   # ],
@@ -30,7 +32,7 @@ PLAYLIST_MAP = {
   #   "PLOZioxrIwCv07eahemHM6wGvCePv6B6X8"
   # ],
   # "som": [
-  #   "PLOZioxrIwCv2lOyXZPuW213wF1nXQmKUM"  # error => fixed by insert video info
+  #   "PLOZioxrIwCv2lOyXZPuW213wF1nXQmKUM"  # error video => fixed by insert video info
   # ],
   # "ne": [
   #   "PLOZioxrIwCv0q8q6KQBlX0hBIl1ZfE268"
@@ -39,7 +41,7 @@ PLAYLIST_MAP = {
   #   "PLOZioxrIwCv329B1jr2GG7CPhpMTSYVQG"
   # ],
   # "my": [
-  #   "PLOZioxrIwCv3a7_cWltapDop8tm2_eyXa"
+  #   "PLOZioxrIwCv3a7_cWltapDop8tm2_eyXa"   # contains private video
   # ],
   # "ps": [
   #   "PLOZioxrIwCv2ZJQvlXLg-uMPTQpvx5kDE"
@@ -56,9 +58,9 @@ PLAYLIST_MAP = {
   # "Rohingya": [
   #   "PLOZioxrIwCv33zt5aFFjWqDoEMm55MVA9"
   # ],
-  "Karenni": [
-    "PLOZioxrIwCv03K3kD4hP8ltoX3QOsFLNP"
-  ],
+  # "Karenni": [
+  #   "PLOZioxrIwCv03K3kD4hP8ltoX3QOsFLNP"
+  # ],
   # "Karen": [
   #   "PLOZioxrIwCv3-N46sJG8QZnHT4G4s4KDk"
   # ]
@@ -167,7 +169,9 @@ class RefugeeResponseVideo():
                                                     self.title)
 
   def download_info(self, use_cache=True):
-
+    """
+    Download video info to json file
+    """
     match = YOUTUBE_ID_REGEX.match(self.url)
     if not match:
       LOGGER.error('==> URL ' + self.url + ' does not match YOUTUBE_ID_REGEX')
@@ -194,13 +198,12 @@ class RefugeeResponseVideo():
       if video:
         try:
           vinfo = video.get_resource_info()
-          # Save the remaining "temporary scraped values" of attributes with actual values
-          # from the video metadata.
           json.dump(vinfo,
                     open(vinfo_json_path, 'w'),
                     indent=4,
                     ensure_ascii=False,
                     sort_keys=True)
+          return True
         except Exception as e:
           LOGGER.error("Failed to get video info: %s", e)
           return False
@@ -232,7 +235,6 @@ class RefugeeResponsePlaylist():
     self.playlist_id = playlist_item[1][0]
     self.use_cache = use_cache
     self.playlist_info_json_path = os.path.join(YOUTUBE_CACHE_DIR, self.lang_name + '.json')
-    LOGGER.info("playlist_info_json_path: %s", self.playlist_info_json_path)
 
   def get_playlist_info(self):
     """
@@ -243,7 +245,7 @@ class RefugeeResponsePlaylist():
 
     playlist_info = None
     if os.path.exists(self.playlist_info_json_path) and self.use_cache:
-      LOGGER.info("Retrieving cached playlist information...")
+      LOGGER.info("[Playlist %s] Retrieving cached playlist information...", self.playlist_id)
       playlist_info = json.load(open(self.playlist_info_json_path))
 
     if not playlist_info:
@@ -252,21 +254,33 @@ class RefugeeResponsePlaylist():
 
       if playlist_resource:
         try:
-          playlist_info = playlist_resource.get_resource_info( dict(ignoreerrors=False, skip_download=True) )
-          # Save the remaining "temporary scraped values" of attributes with actual values
-          # from the video metadata.
+          playlist_info = playlist_resource.get_resource_info( dict(ignoreerrors=True, skip_download=True) )
+          
+          # Traverse through the video list to remove duplicates
+          video_set = set()
+          videos = playlist_info.get('children')
+          for video in videos:
+            if video['id'] in video_set:
+              videos.remove(video)
+            else:
+              video_set.add(video['id'])
+
           json.dump(playlist_info,
                     open(self.playlist_info_json_path, 'w'),
                     indent=4,
                     ensure_ascii=False,
                     sort_keys=False)
+          LOGGER.info("[Playlist %s] Successfully get playlist info", self.playlist_id)
           return playlist_info
         except Exception as e:
-          LOGGER.error("Failed to get playlist info: %s", e)
+          LOGGER.error("[Playlist %s] Failed to get playlist info: %s", self.playlist_id, e)
           return None
     return playlist_info
 
   def insert_video_info(self, video_id):
+    """
+    Insert video info json block to playlist json file
+    """
     if not os.path.isdir(YOUTUBE_CACHE_DIR):
       os.mkdir(YOUTUBE_CACHE_DIR)
       return False
@@ -296,38 +310,16 @@ class RefugeeResponsePlaylist():
       return True
     return False
 
-# def get_playlist_info(playlist_item, use_cache=True):
-#   """
-#   Get playlist info from either local json cache or URL
-#   """
-#   lang_str = playlist_item[0]
-#   playlist_id = playlist_item[1][0]
-#   if not os.path.isdir(YOUTUBE_CACHE_DIR):
-#     os.mkdir(YOUTUBE_CACHE_DIR)
-#   playlist_info_json_path = os.path.join(YOUTUBE_CACHE_DIR, lang_str + '.json')
+def get_video_description():
+  video_description_map = dict()
+  if os.path.exists(VIDEO_DESCRIPTION_JSON_PATH):
+    video_description_json = json.load(open(VIDEO_DESCRIPTION_JSON_PATH))
+    for video_id, video_description_obj in video_description_json.items():
+      video_description = video_description_obj["Description"]
+      if video_description is not None and video_description.upper() != "EXCLUDE":
+        video_description_map[video_id] = video_description
+  else:
+    LOGGER.error("Video Description JSON file not exist")
+  return video_description_map
 
-#   playlist_info = None
-#   if os.path.exists(playlist_info_json_path) and use_cache:
-#     LOGGER.info("Retrieving cached playlist information...")
-#     playlist_info = json.load(open(playlist_info_json_path))
-
-#   if not playlist_info:
-#     playlist_url = YOUTUBE_PLAYLIST_URL_FORMAT.format(playlist_id)
-#     playlist_resource = YouTubeResource(playlist_url)
-
-#     if playlist_resource:
-#       try:
-#         playlist_info = playlist_resource.get_resource_info( dict(noplaylist=True, ignoreerrors=True, skip_download=True) )
-#         # Save the remaining "temporary scraped values" of attributes with actual values
-#         # from the video metadata.
-#         json.dump(playlist_info,
-#                   open(playlist_info_json_path, 'w'),
-#                   indent=4,
-#                   ensure_ascii=False,
-#                   sort_keys=False)
-#         return playlist_info
-#       except Exception as e:
-#         LOGGER.error("Failed to get playlist info: %s", e)
-#         return None
-
-#   return playlist_info
+VIDEO_DESCRIPTION_MAP = get_video_description()
