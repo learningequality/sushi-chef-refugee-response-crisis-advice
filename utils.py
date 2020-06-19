@@ -22,48 +22,48 @@ PLAYLIST_MAP = {
   "en": [
     "PLOZioxrIwCv0zNRqCsTN979Ez3jBRQiNN"
   ],
-  # "ru": [
-  #   "PLOZioxrIwCv3SW4keysO7tO2bMnHlkE8h"
-  # ],
-  # "ar": [
-  #   "PLOZioxrIwCv3WqpQzBrn2_qHhyVsWjErq"
-  # ],
-  # "es": [
-  #   "PLOZioxrIwCv07eahemHM6wGvCePv6B6X8"
-  # ],
-  # "som": [
-  #   "PLOZioxrIwCv2lOyXZPuW213wF1nXQmKUM"  # error video => fixed by insert video info
-  # ],
-  # "ne": [
-  #   "PLOZioxrIwCv0q8q6KQBlX0hBIl1ZfE268"
-  # ],
-  # "rw": [
-  #   "PLOZioxrIwCv329B1jr2GG7CPhpMTSYVQG"
-  # ],
-  # "my": [
-  #   "PLOZioxrIwCv3a7_cWltapDop8tm2_eyXa"   # contains private video
-  # ],
-  # "ps": [
-  #   "PLOZioxrIwCv2ZJQvlXLg-uMPTQpvx5kDE"
-  # ],
-  # "sw": [
-  #   "PLOZioxrIwCv10xetpSpX296rsIEs2mb67"
-  # ],
-  # "uk": [
-  #   "PLOZioxrIwCv3XpPncjdUrwuoB2jlgZ2no"
-  # ],
-  # "Kachin": [
-  #   "PLOZioxrIwCv2qOS16EQeuy8vcp7ri5p07"
-  # ],
-  # "Rohingya": [
-  #   "PLOZioxrIwCv33zt5aFFjWqDoEMm55MVA9"
-  # ],
-  # "Karenni": [
-  #   "PLOZioxrIwCv03K3kD4hP8ltoX3QOsFLNP"
-  # ],
-  # "Karen": [
-  #   "PLOZioxrIwCv3-N46sJG8QZnHT4G4s4KDk"
-  # ]
+  "ru": [
+    "PLOZioxrIwCv3SW4keysO7tO2bMnHlkE8h"
+  ],
+  "ar": [
+    "PLOZioxrIwCv3WqpQzBrn2_qHhyVsWjErq"
+  ],
+  "es": [
+    "PLOZioxrIwCv07eahemHM6wGvCePv6B6X8"
+  ],
+  "som": [
+    "PLOZioxrIwCv2lOyXZPuW213wF1nXQmKUM"  # error video => fixed by insert video info
+  ],
+  "ne": [
+    "PLOZioxrIwCv0q8q6KQBlX0hBIl1ZfE268"
+  ],
+  "rw": [
+    "PLOZioxrIwCv329B1jr2GG7CPhpMTSYVQG"
+  ],
+  "my": [
+    "PLOZioxrIwCv3a7_cWltapDop8tm2_eyXa"   # contains private video
+  ],
+  "ps": [
+    "PLOZioxrIwCv2ZJQvlXLg-uMPTQpvx5kDE"
+  ],
+  "sw": [
+    "PLOZioxrIwCv10xetpSpX296rsIEs2mb67"
+  ],
+  "uk": [
+    "PLOZioxrIwCv3XpPncjdUrwuoB2jlgZ2no"
+  ],
+  "Kachin": [
+    "PLOZioxrIwCv2qOS16EQeuy8vcp7ri5p07"
+  ],
+  "Rohingya": [
+    "PLOZioxrIwCv33zt5aFFjWqDoEMm55MVA9"
+  ],
+  "Karenni": [
+    "PLOZioxrIwCv03K3kD4hP8ltoX3QOsFLNP"
+  ],
+  "Karen": [
+    "PLOZioxrIwCv3-N46sJG8QZnHT4G4s4KDk"
+  ]
 }
 
 # List of languages not avialble at the le_utils
@@ -318,6 +318,8 @@ def get_video_description():
       video_description = video_description_obj["Description"]
       if video_description is not None and video_description.upper() != "EXCLUDE":
         video_description_map[video_id] = video_description
+      elif video_description is None:
+        video_description_map[video_id] = ''
   else:
     LOGGER.error("Video Description JSON file not exist")
   return video_description_map

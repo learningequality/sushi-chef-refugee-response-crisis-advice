@@ -153,7 +153,8 @@ def download_video_topics(topic_node, playlist_item, lang_obj, use_cache = True,
     if video_id in VIDEO_DESCRIPTION_MAP:
       video_description = VIDEO_DESCRIPTION_MAP[video_id]
     else:
-      video_description = ''
+      # Exclude videos
+      continue
     LOGGER.info("Video Description: '%s'", video_description)
     try:
       video_node = VideoNode(
