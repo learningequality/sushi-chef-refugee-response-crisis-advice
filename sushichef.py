@@ -1,18 +1,14 @@
 #!/usr/bin/env python
+import argparse
+import logging
 import os
 import sys
-import logging
 import youtube_dl
-import argparse
 
 from ricecooker.chefs import SushiChef
 from ricecooker.classes import nodes, files, questions, licenses
-from ricecooker.classes.files import YouTubeVideoFile
-from ricecooker.classes.nodes import VideoNode, TopicNode
-from ricecooker.classes.licenses import get_license
 from ricecooker.exceptions import raise_for_invalid_channel
 from le_utils.constants import exercises, content_kinds, file_formats, format_presets, languages
-from pressurecooker.youtube import YouTubeResource
 
 from utils import *
 from google_sheet_utils import *
@@ -122,7 +118,7 @@ class RefugeeResponseSushiChef(SushiChef):
             # LOGGER.info("Generating TopicNode for language: '%s'", lang)
             playlist_id = id_list[0]
             tipic_source_id = 'refugeeresponse-child-topic-{0}'.format(rr_lang_obj.name)
-            topic_node = TopicNode(
+            topic_node = nodes.TopicNode(
               title=TOPIC_NAME_FORMAT.format(rr_lang_obj.name),
               source_id=tipic_source_id,
               author=REFUGEE_RESPONSE,

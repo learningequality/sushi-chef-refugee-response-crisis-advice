@@ -1,7 +1,7 @@
 import json
+import logging
 import os
 import re
-import logging
 import youtube_dl
 
 from pressurecooker.youtube import YouTubeResource
