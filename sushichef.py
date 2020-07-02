@@ -115,7 +115,7 @@ class RefugeeResponseSushiChef(SushiChef):
                 playlist_id = id_list[0]
                 tipic_source_id = 'refugeeresponse-child-topic-{0}'.format(rr_lang_obj.name)
                 topic_node = nodes.TopicNode(
-                    title=TOPIC_NAME_FORMAT.format(rr_lang_obj.name),
+                    title=rr_lang_obj.name,
                     source_id=tipic_source_id,
                     author=REFUGEE_RESPONSE,
                     provider=REFUGEE_RESPONSE,
