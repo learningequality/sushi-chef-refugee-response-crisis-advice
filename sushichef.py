@@ -175,7 +175,7 @@ def insert_video_info(video_list, playlist, use_cache = True):
     for video in video_list: 
         try:
             video_url = YOUTUBE_VIDEO_URL_FORMAT.format(video)
-            rr_video_obj = RefugeeResponseVideo(url=video_url, language='und')
+            rr_video_obj = RefugeeResponseVideo(url=video_url)
             if rr_video_obj.download_info(use_cache):
                 LOGGER.info("Success extract video info with title: %s", rr_video_obj.title)
                 if not playlist_obj.insert_video_info(video):
