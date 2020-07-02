@@ -43,8 +43,12 @@ class RefugeeResponseSheetWriter():
     def __init__(self, spreadsheet_id):
         self.spreadsheet_id = spreadsheet_id
         if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
+            try:
+                token = open('token.pickle', 'rb')
                 self.creds = pickle.load(token)
+            except Exception as e:
+                print("Failed to get credentials, try user log in")
+                
         # If there are no (valid) credentials available, let the user log in.
         if not self.creds or not self.creds.valid:
             if self.creds and self.creds.expired and self.creds.refresh_token:
