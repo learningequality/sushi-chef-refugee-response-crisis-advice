@@ -27,7 +27,6 @@ CHANNEL_THUMBNAIL = None                                    # Local path or url 
 
 # Additional constants
 ################################################################################
-LANGUAGE_KEYNAME = "--lang"
 NO_CACHE_KEYNAME = "--nocache"
 DOWNLOAD_TO_GOOGLE_SHEET_KEYNAME = "--tosheet"
 EXTRACT_VIDEO_INFO = "--video"
@@ -60,6 +59,7 @@ class RefugeeResponseSushiChef(SushiChef):
     }
     use_cache = True   # field to indicate whether use cached json data
     to_sheet = False
+    sheet_id = ''
     insert_video_info = False
     video_list = []
     to_playlist = ''
@@ -72,6 +72,15 @@ class RefugeeResponseSushiChef(SushiChef):
           - kwargs: extra options passed in as key="value" pairs on the command line
             For example, add the command line option   lang="fr"  and the value
             "fr" will be passed along to `construct_channel` as kwargs['lang'].
+          - Handled command line options:
+            --nocache:  Do not use cached YouTube playlist or video info; 
+            --tosheet:  Only upload YouTube video information to Google sheet, will not generate channel;
+                        Please provide Google sheet ID in form '--tosheet=[sheet_id]';
+            --playlist, --video:
+                        These two options must be used together. They are used to save YouTube video cache info
+                        to a specified YouTube playlist cache file. This feature is useful when one or more videos
+                        from a playlist keep failing during extraction. A single video extraction usually works better
+                        than a playlist extraction.
         Returns: ChannelNode
         """
         # Update language info from option input
@@ -82,6 +91,7 @@ class RefugeeResponseSushiChef(SushiChef):
                 LOGGER.info("use_cache = '%d'", self.use_cache)
             if key == DOWNLOAD_TO_GOOGLE_SHEET_KEYNAME:
                 self.to_sheet = True
+                self.sheet_id = value
                 LOGGER.info("to_sheet = '%d'", self.to_sheet)
             if key == EXTRACT_VIDEO_INFO:
                 self.insert_video_info = True
@@ -92,15 +102,18 @@ class RefugeeResponseSushiChef(SushiChef):
                 LOGGER.info("playlist = '%s'", self.to_playlist)
 
         if self.to_sheet:
-            upload_description_to_google_sheet(self.use_cache)
+            upload_description_to_google_sheet(self.sheet_id, self.use_cache)
             exit(0)
 
         if self.insert_video_info:
             if self.video_list is not None and self.to_playlist in PLAYLIST_MAP and len(self.video_list) > 0:
                 insert_video_info(self.video_list, self.to_playlist, self.use_cache)
                 exit(0)
+            elif not self.to_playlist in PLAYLIST_MAP:
+                LOGGER.error("Invalid playlist value!")
+                exit(1)
             else:
-                LOGGER.error("Invalid arguments to inset video info, aborting")
+                LOGGER.error("Option '--video' and '--playlist' must be used together")
                 exit(1)
 
         channel = self.get_channel(*args, **kwargs)  # Create ChannelNode from data in self.channel_info
@@ -186,11 +199,11 @@ def insert_video_info(video_list, playlist, use_cache = True):
         except Exception as e:
             LOGGER.error('Error extract video info: %s', e)
 
-def upload_description_to_google_sheet(use_cache = True):
+def upload_description_to_google_sheet(sheet_id, use_cache = True):
     """
     Fetch and update video description to Google spreadsheet
     """
-    google_sheet_obj = RefugeeResponseSheetWriter(SPREADSHEET_ID)
+    google_sheet_obj = RefugeeResponseSheetWriter(sheet_id)
     for lang, id_list in PLAYLIST_MAP.items():
         rr_lang_obj = RefugeeResponseLanguage(name=lang, code=lang)
         if not rr_lang_obj.get_lang_obj():
