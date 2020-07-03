@@ -70,7 +70,7 @@ PLAYLIST_MAP = {
 UND_LANG = {
     "kachin": {
         "name": "Kachin",
-        "native_name": "ကချင်ဘာသာ, kachin, jingpho",
+        "native_name": "ကချင်ဘာသာ",
         "code": "und"
     },
     "rohingya": {
@@ -80,12 +80,12 @@ UND_LANG = {
     },
     "karenni": {
         "name": "Karenni",
-        "native_name": "Red Karen, Karenni, Kayah",
+        "native_name": "Karenni",
         "code": "und",
     },
     "karen": {
         "name": "Karen",
-        "native_name": "karen",
+        "native_name": "ကညီကျိ",
         "code": "und",
     }
 }

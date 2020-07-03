@@ -52,7 +52,7 @@ class RefugeeResponseSushiChef(SushiChef):
     channel_info = {                                   # Channel Metadata
         'CHANNEL_SOURCE_DOMAIN': CHANNEL_DOMAIN,       # Who is providing the content
         'CHANNEL_SOURCE_ID': CHANNEL_SOURCE_ID,        # Channel's unique id
-        'CHANNEL_TITLE': CHANNEL_NAME,                           # Name of channel
+        'CHANNEL_TITLE': CHANNEL_NAME,                 # Name of channel
         'CHANNEL_LANGUAGE': CHANNEL_LANGUAGE,          # Language of channel
         'CHANNEL_THUMBNAIL': CHANNEL_THUMBNAIL,        # Local path or url to image file (optional)
         'CHANNEL_DESCRIPTION': CHANNEL_DESCRIPTION,    # Description of the channel (optional)
@@ -129,7 +129,7 @@ class RefugeeResponseSushiChef(SushiChef):
                 playlist_id = id_list[0]
                 tipic_source_id = 'refugeeresponse-child-topic-{0}'.format(rr_lang_obj.name)
                 topic_node = nodes.TopicNode(
-                    title=rr_lang_obj.name,
+                    title=rr_lang_obj.native_name,
                     source_id=tipic_source_id,
                     author=REFUGEE_RESPONSE,
                     provider=REFUGEE_RESPONSE,
