@@ -80,7 +80,7 @@ class RefugeeResponseSushiChef(SushiChef):
                         These two options must be used together. They are used to save YouTube video cache info
                         to a specified YouTube playlist cache file. This feature is useful when one or more videos
                         from a playlist keep failing during extraction. A single video extraction usually works better
-                        than a playlist extraction.
+                        than a playlist extraction. Multiple video IDs should be separated by commas.
         Returns: ChannelNode
         """
         # Update language info from option input
@@ -109,11 +109,12 @@ class RefugeeResponseSushiChef(SushiChef):
             if self.video_list is not None and self.to_playlist in PLAYLIST_MAP and len(self.video_list) > 0:
                 insert_video_info(self.video_list, self.to_playlist, self.use_cache)
                 exit(0)
-            elif not self.to_playlist in PLAYLIST_MAP:
-                LOGGER.error("Invalid playlist value!")
+            elif self.video_list is None or len(self.video_list) == 0:
+                LOGGER.error("Invalid video value!")
                 exit(1)
             else:
-                LOGGER.error("Option '--video' and '--playlist' must be used together")
+                LOGGER.error("Option '--video' and '--playlist' must be used together. " + 
+                             "And please make sure input YouTube playlist ID is inside 'PLAYLIST_MAP'")
                 exit(1)
 
         channel = self.get_channel(*args, **kwargs)  # Create ChannelNode from data in self.channel_info
