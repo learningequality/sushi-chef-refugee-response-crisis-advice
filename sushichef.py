@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import argparse
 import logging
-import os
 import sys
 import youtube_dl
 
@@ -21,9 +20,9 @@ LOGGER.setLevel(logging.DEBUG)
 CHANNEL_NAME = "Crisis Advice from the Refugee Response"
 CHANNEL_DOMAIN = "refugeeresponse.org"
 CHANNEL_LANGUAGE = "mul"                                     # Default language of the channel
-CHANNEL_SOURCE_ID = "refugee-response"                              # Channel's unique id
+CHANNEL_SOURCE_ID = "refugee-response"                       # Channel's unique id
 CHANNEL_DESCRIPTION = "Short video lessons on managing education, mental health, public health, COVID-19 questions, and more topics for building general knowledge and succeeding in a new environment."
-CHANNEL_THUMBNAIL = None                                    # Local path or url to image file (optional)
+CHANNEL_THUMBNAIL = REFUGEE_RESPONSE_THUMBNAIL_PATH          # Local path or url to image file (optional)
 
 # Additional constants
 ################################################################################

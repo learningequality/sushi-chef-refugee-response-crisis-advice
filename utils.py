@@ -17,6 +17,7 @@ YOUTUBE_ID_REGEX = re.compile(
 YOUTUBE_PLAYLIST_URL_FORMAT = "https://www.youtube.com/playlist?list={0}"
 
 VIDEO_DESCRIPTION_JSON_PATH = os.path.join('chefdata', 'youtubecache', 'video_description.json')
+REFUGEE_RESPONSE_THUMBNAIL_PATH = os.path.join("chefdata", "refresponse_logo.png")
 
 PLAYLIST_MAP = {
     "en": [
